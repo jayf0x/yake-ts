@@ -135,6 +135,17 @@ Available codes: `ar`, `bg`, `br`, `cz`, `da`, `de`, `el`, `es`, `et`, `fa`, `fi
 `hu`, `hy`, `id`, `it`, `ja`, `lt`, `lv`, `nl`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`,
 `tr`, `uk`, `zh` (vendored from `@ade_oshineye/yaket`'s stopword bundle).
 
+**Adding your own words on top of a bundled list.** Every language, including English, is a plain
+`yake-ts/stopwords/<code>` subpath export — `yake-ts/stopwords/en` works the same as `/fr`. Spread
+it into a `Set` with your own additions; this only imports the one list you name, so it costs
+nothing beyond what you were already paying:
+
+```ts
+import { STOPWORDS as EN } from "yake-ts/stopwords/en";
+
+extractKeywords(text, { stopwords: new Set([...EN, "widget", "wigl"]) });
+```
+
 **CJK needs pre-segmentation.** Tokenization is a Unicode word-boundary scan, so Chinese and
 Japanese text — which has no spaces between words — comes back as one run-on token per script run,
 and the `zh`/`ja` stopword lists can't fix that. Segment it yourself (e.g. with `Intl.Segmenter`)
