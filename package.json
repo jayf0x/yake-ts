@@ -1,6 +1,6 @@
 {
   "name": "yake-ts",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "description": "Tiny, dependency-free YAKE keyword extractor — no classes, no caching, one pure function. English bundled, 33 more languages as opt-in imports.",
   "author": "jayF0x",
