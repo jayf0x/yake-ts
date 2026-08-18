@@ -9,21 +9,39 @@
 
 <!-- README_HEAD:END -->
 
-Tiny, dependency-free [YAKE](https://github.com/LIAAD/yake) keyword extractor. No classes, no
-caching — a single pure function you can call inline, e.g. to name a session from its first
-message.
+**Text in, ranked keywords out.** 🔑
 
-## Why not just use `yake-js` / a full NLP library?
+`yake-ts` implements [YAKE](https://github.com/LIAAD/yake) — an unsupervised keyword extractor that
+scores candidate phrases from statistics of one document alone: word frequency, casing, position,
+spread across sentences, and co-occurrence. No model, no corpus, no training, no network call.
 
-|                 | yake-ts                                          | `@ade_oshineye/yaket`         | spaCy / a full NLP stack     |
-| --------------- | -------------------------------------------------- | ------------------------------ | ----------------------------- |
-| Runtime deps    | zero                                                 | zero, but 34 bundled languages | tokenizers, models, sometimes native bindings |
-| Bundle surface  | one pure function                                    | class + provider + cache layer | an entire pipeline             |
-| Languages       | English bundled; 33 more as opt-in subpath imports    | 34, not tree-shakeable via the public API | most, via models |
-| Setup           | `extractKeywords(text)`                              | instantiate + configure a class | load a model, build a pipeline |
+```ts
+import { extractKeywords } from "yake-ts";
 
-Use a full NLP stack when you need POS tagging, NER, or CJK word segmentation. Reach for this
-when you just want a fast, unsupervised keyword list from a short piece of space-delimited text.
+extractKeywords("fix flaky auth test in login flow")[0].keyword; // "fix flaky auth"
+```
+
+One function, zero runtime dependencies, ~5.7 kB gzipped including the English stopword list.
+33 more languages are separate imports you only pay for if you use them.
+
+## Picking a package
+
+Several JS keyword extractors exist and they solve genuinely different problems:
+
+| Package | What you get | What it costs |
+| --- | --- | --- |
+| **`yake-ts`** | YAKE scores from a single call; English inline, 33 languages opt-in; ESM, edge/browser-safe | young and unproven; Levenshtein-only dedup; no CJK segmentation |
+| [`@ade_oshineye/yaket`](https://www.npmjs.com/package/@ade_oshineye/yaket) | the same algorithm, plus scorer/tokenizer hooks, CLI, highlighter, Bobbin adapter, Python-parity + Cloudflare test lanes, benchmarks | ~370 kB unpacked, all 34 stopword sets reachable through one API; Node 20+; a much bigger API to learn |
+| [`yake-wasm`](https://www.npmjs.com/package/yake-wasm) | YAKE in Rust/WASM; fast on long documents; drops n-gram substrings so "data science" wins over "data" | a WASM init step in your bundler; stopwords are English-only and not configurable; last published 2022 |
+| [`retext-keywords`](https://github.com/retextjs/retext-keywords) | part-of-speech-aware keywords *and* keyphrases inside a [unified](https://unifiedjs.com) pipeline | needs `unified` + `retext` + `retext-pos`; ~5 dependencies; results come back as stems on a vfile |
+| [`keyword-extractor`](https://www.npmjs.com/package/keyword-extractor) | stopword removal in 20 languages, battle-tested (~220k downloads/week) | no ranking — you get a filtered word list, not keywords ordered by importance |
+
+Short version: `keyword-extractor` if you only need stopwords gone, `retext-keywords` if you are
+already in the unified ecosystem, `yaket` if you need the extension points or upstream parity,
+`yake-ts` if you want YAKE's ranking in the smallest possible bundle with one import.
+
+For POS tagging, NER, or CJK word segmentation, use a real NLP stack (spaCy, `wink-nlp`) — none of
+the above do that.
 
 ## What's new
 
@@ -48,25 +66,31 @@ npm install yake-ts   # bun / pnpm / yarn all fine
 import { extractKeywords } from "yake-ts";
 
 const keywords = extractKeywords("fix flaky auth test in login flow");
-// [{ keyword: "fix flaky auth", normalized: "fix flaky auth", score: 0.017, ngramSize: 3, occurrences: 1, sentenceIds: [0] }, ...]
+// [
+//   { keyword: "fix flaky auth", normalized: "fix flaky auth", score: 0.017,
+//     ngramSize: 3, occurrences: 1, sentenceIds: [0] },
+//   ...
+// ]
 ```
 
-Lower `score` means more relevant.
+Results come back sorted, best first. Typical uses: tagging notes or CMS entries, naming a chat
+session from its first message, enriching search/RAG chunks without an LLM call.
 
 ## The rules
 
 Three things, and you've seen the whole tool.
 
-**1 · Unsupervised, per-call.** No training, no corpus, no model to load — `extractKeywords`
-scores candidate phrases purely from statistics of the input text itself (frequency, casing,
-position, co-occurrence). Call it fresh every time; there's nothing to warm up or reuse.
+**1 · Lower score wins.** `score` is a cost, not a relevance percentage. The list is already sorted
+ascending, so `[0]` is the strongest keyword — don't re-sort it descending.
 
-**2 · English by default, 33 more languages a subpath import away.** `import { STOPWORDS } from
-"yake-ts/stopwords/fr"` and pass it as `stopwords` — see [Languages](#languages). Each language is
-its own subpath export, so a consumer who never imports one pays zero bytes for it.
+**2 · Everything happens per call.** Scores come from the input text alone, so there is nothing to
+load, warm up, or reuse between calls. Pass a whole document rather than one sentence at a time:
+YAKE's position and spread features need more than one sentence to say anything.
 
-**3 · Lower score wins.** Unlike most ranking APIs, `score` is a cost, not a relevance percentage —
-sort ascending, and the first result is the strongest keyword.
+**3 · A language is a stopword list, not a tokenizer.** Pass another language's set via the
+`stopwords` option and phrase detection adapts; word splitting stays the same Unicode
+word-boundary scan. Fine for space-delimited scripts, not for unsegmented Chinese or Japanese —
+see [Languages](#languages).
 
 ## API
 
@@ -76,75 +100,74 @@ extractKeywords(text: string, options?: YakeTsOptions): Keyword[]
 
 ### Options
 
-| Option             | Type                | Default               | What it does                                                                                    |
-| ------------------ | ------------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
-| `maxNgramSize`      | `number`             | `3`                     | Max words per candidate keyword phrase.                                                            |
-| `windowSize`        | `number`             | `1`                     | Co-occurrence window size for the relatedness feature.                                             |
-| `dedupeThreshold`   | `number`             | `0.9`                   | Similarity ceiling above which a candidate is dropped as a near-duplicate. `1` disables dedup.      |
-| `limit`             | `number`             | `10`                    | Max number of keywords to return.                                                                  |
-| `stopwords`         | `Iterable<string>`   | bundled English list    | Stopwords to use. See [Languages](#languages) for other bundled sets, or pass your own.            |
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `maxNgramSize` | `number` | `3` | Max words per candidate keyword phrase. |
+| `windowSize` | `number` | `1` | Co-occurrence window size for the relatedness feature. |
+| `dedupeThreshold` | `number` | `0.9` | Similarity ceiling above which a candidate is dropped as a near-duplicate. `1` disables dedup. |
+| `limit` | `number` | `10` | Max number of keywords to return. |
+| `stopwords` | `Iterable<string>` | bundled English | Stopword set to use — see [Languages](#languages), or pass your own. |
 
 ### `Keyword`
 
-| Field         | Type       | Meaning                                                       |
-| ------------- | ---------- | --------------------------------------------------------------- |
-| `keyword`     | `string`   | Surface form as it appeared in the source text.                 |
-| `normalized`  | `string`   | Lowercased form used for matching/deduplication.                |
-| `score`       | `number`   | YAKE score — lower is more relevant.                             |
-| `ngramSize`   | `number`   | Number of words in the phrase.                                   |
-| `occurrences` | `number`   | How many times the phrase occurred in the source text.           |
-| `sentenceIds` | `number[]` | Zero-based indices of sentences the phrase occurs in, ascending. |
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `keyword` | `string` | Surface form as it appeared in the source text. |
+| `normalized` | `string` | Lowercased form used for matching and deduplication. |
+| `score` | `number` | YAKE score — lower is more relevant. |
+| `ngramSize` | `number` | Number of words in the phrase. |
+| `occurrences` | `number` | How many times the phrase occurred in the text. |
+| `sentenceIds` | `number[]` | Zero-based indices of the sentences it occurs in, ascending. |
 
 ## Languages
 
-English is bundled and used by default. 33 more languages ship as stopword-only subpath exports —
-zero cost if you never import them:
+English is bundled and used by default. 33 more ship as stopword-only subpath exports, so a
+consumer who never imports one pays zero bytes for it:
 
 ```ts
 import { extractKeywords } from "yake-ts";
-import { STOPWORDS as FRENCH_STOPWORDS } from "yake-ts/stopwords/fr";
+import { STOPWORDS as FRENCH } from "yake-ts/stopwords/fr";
 
-extractKeywords("le chat est sur la table", { stopwords: FRENCH_STOPWORDS });
+extractKeywords("le chat est sur la table", { stopwords: FRENCH });
 ```
 
 Available codes: `ar`, `bg`, `br`, `cz`, `da`, `de`, `el`, `es`, `et`, `fa`, `fi`, `fr`, `hi`, `hr`,
 `hu`, `hy`, `id`, `it`, `ja`, `lt`, `lv`, `nl`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`,
 `tr`, `uk`, `zh` (vendored from `@ade_oshineye/yaket`'s stopword bundle).
 
-**This only swaps the stopword list — tokenization itself is not per-language.** Word splitting is
-whitespace/word-boundary based (Unicode letters/marks/digits), which works reasonably for
-space-delimited scripts (the list above minus `zh`/`ja`). It does **not** do CJK word
-segmentation: raw Chinese or Japanese text has no spaces between words, so `tokenizeWords` returns
-one run-on token per contiguous script run instead of individual words, and `zh`/`ja` stopwords
-won't help. Pre-segment that text yourself (space-join the words) before calling
-`extractKeywords` if you need those languages.
+**CJK needs pre-segmentation.** Tokenization is a Unicode word-boundary scan, so Chinese and
+Japanese text — which has no spaces between words — comes back as one run-on token per script run,
+and the `zh`/`ja` stopword lists can't fix that. Segment it yourself (e.g. with `Intl.Segmenter`)
+and space-join the result before calling `extractKeywords`.
 
-## Design notes
+## Limitations
 
-This is a trimmed, functional port of the algorithm core from
-[`@ade_oshineye/yaket`](https://www.npmjs.com/package/@ade_oshineye/yaket), vendored rather than
-depended on. Deliberate simplifications:
+- **Not byte-for-byte upstream YAKE.** It is a port of a port: the algorithm core comes from
+  [`@ade_oshineye/yaket`](https://www.npmjs.com/package/@ade_oshineye/yaket), vendored rather than
+  depended on, which itself documents drift from Python YAKE's `segtok` tokenizer. Expect the same
+  top keywords, not identical float scores.
+- **Dedup is Levenshtein similarity only**, where yaket lets you choose `seqm`, `levs`, or `jaro`.
+  Good enough for short candidate phrases; if you need Python's `seqm` behavior, use yaket.
+- **Single documents only.** No corpus statistics, no TF-IDF across a collection, no topic modeling.
+- **Short input gives thin results.** A five-word title has almost no statistics to score.
+- **No lemmatization or POS filtering**, so plural and singular forms rank as separate candidates.
 
-- **English bundled by default, other languages as subpath exports** — see
-  [Languages](#languages). Each is published as its own `yake-ts/stopwords/<code>` entry point
-  instead of one bundle, so importing yake-ts never pulls in a language you didn't ask for.
-- **No classes** — everything runs once per `extractKeywords()` call, so there's no object to
-  reuse or subclass. Plain interfaces + functions throughout.
-- **No caching** — same reasoning: nothing is computed more than once per call, so a cache would
-  only add invalidation bugs for no benefit.
-- **Levenshtein-only dedup**, not yaket's pluggable `seqm`/`levs`/`jaro` choice — one
-  well-understood algorithm, good enough for deduping short candidate phrases, instead of three.
+## Credits
 
-Zero runtime dependencies.
+The algorithm is from the YAKE paper: Campos, Mangaravite, Pasquali, Jorge, Nunes, Jatowt,
+*YAKE! Keyword Extraction from Single Documents using Multiple Local Features*, Information
+Sciences 509 (2020), 257–289 — [10.1016/j.ins.2019.09.013](https://doi.org/10.1016/j.ins.2019.09.013).
+Reference implementation: [LIAAD/yake](https://github.com/LIAAD/yake). The TypeScript core and the
+stopword bundle are adapted from [`@ade_oshineye/yaket`](https://github.com/adewale/yaket) (MIT).
 
 ## Development
 
 ```bash
 bun install
-bun run test        # bun test
+bun run test         # bun test
 bun run typecheck    # tsc --noEmit
 bun run build        # vite → dist/
-bun run format        # biome check --write
+bun run format       # biome check --write
 ```
 
 ## License
