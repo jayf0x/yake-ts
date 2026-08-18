@@ -30,6 +30,7 @@ when you just want a fast, unsupervised keyword list from a short piece of space
 <!-- WHATSNEW:START -->
 | Version | Highlights |
 | ------- | ---------- |
+| `1.2.0` | Tiny, dependency-free YAKE keyword extractor—one function, 34 languages, zero classes |
 | `0.1.0` | Initial release — `extractKeywords`, zero-dependency YAKE, English bundled + 33 more languages as subpath imports |
 <!-- WHATSNEW:END -->
 
