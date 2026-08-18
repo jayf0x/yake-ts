@@ -10,19 +10,13 @@
  * upstream parity.
  */
 
-export function levenshteinDistance(a: string, b: string): number {
-  if (a === b) {
-    return 0;
-  }
+export const levenshteinDistance = (a: string, b: string): number => {
+  if (a === b) return 0;
 
   const aLength = a.length;
   const bLength = b.length;
-  if (aLength === 0) {
-    return bLength;
-  }
-  if (bLength === 0) {
-    return aLength;
-  }
+  if (aLength === 0) return bLength;
+  if (bLength === 0) return aLength;
 
   let previousRow = Array.from({ length: bLength + 1 }, (_, index) => index);
   let currentRow = new Array<number>(bLength + 1).fill(0);
@@ -32,31 +26,21 @@ export function levenshteinDistance(a: string, b: string): number {
 
     for (let j = 1; j <= bLength; j += 1) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currentRow[j] = Math.min(
-        previousRow[j]! + 1,
-        currentRow[j - 1]! + 1,
-        previousRow[j - 1]! + cost,
-      );
+      currentRow[j] = Math.min(previousRow[j]! + 1, currentRow[j - 1]! + 1, previousRow[j - 1]! + cost);
     }
 
     [previousRow, currentRow] = [currentRow, previousRow];
   }
 
   return previousRow[bLength]!;
-}
+};
 
 /**
  * Normalized similarity in [0, 1], where 1 means identical strings.
  */
-export function levenshteinSimilarity(a: string, b: string): number {
-  if (a === b) {
-    return 1;
-  }
+export const levenshteinSimilarity = (a: string, b: string): number => {
+  if (a === b) return 1;
 
   const maxLength = Math.max(a.length, b.length);
-  if (maxLength === 0) {
-    return 1;
-  }
-
-  return 1 - levenshteinDistance(a, b) / maxLength;
-}
+  return maxLength === 0 ? 1 : 1 - levenshteinDistance(a, b) / maxLength;
+};

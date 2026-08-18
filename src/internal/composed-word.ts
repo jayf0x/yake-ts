@@ -1,5 +1,5 @@
-import * as graph from "./graph.js";
 import type { CooccurrenceGraph } from "./graph.js";
+import * as graph from "./graph.js";
 import type { TermState } from "./single-word.js";
 import { STOPWORD_WEIGHT } from "./tokenize.js";
 
@@ -22,7 +22,7 @@ export interface Candidate {
  * score. Plain record + functions, for the same reason as TermState: one
  * candidate object per phrase per extraction, scored once, never reused.
  */
-export function createCandidate(terms: NormalizedCandidateTerm[]): Candidate {
+export const createCandidate = (terms: NormalizedCandidateTerm[]): Candidate => {
   if (terms.length === 0 || !terms.some(([, , term]) => term != null)) {
     throw new TypeError("createCandidate requires at least one term that exists in the document term index");
   }
@@ -40,34 +40,25 @@ export function createCandidate(terms: NormalizedCandidateTerm[]): Candidate {
     tf: 0,
     h: 1,
   };
-}
+};
 
 /**
  * Merges tag information from another occurrence of the same candidate.
  */
-export function mergeCandidateTags(candidate: Candidate, other: Candidate): void {
-  for (const tag of other.tags) {
-    candidate.tags.add(tag);
-  }
-}
+export const mergeCandidateTags = (candidate: Candidate, other: Candidate): void => {
+  for (const tag of other.tags) candidate.tags.add(tag);
+};
 
 /**
  * A valid keyword phrase has no digit/unusual tokens and doesn't start or end with a stopword.
  */
-export function isValidCandidate(candidate: Candidate): boolean {
-  let validTag = false;
-
-  for (const tag of candidate.tags) {
-    validTag = validTag || (!tag.includes("u") && !tag.includes("d"));
-  }
-
-  return validTag && !candidate.startOrEndStopwords;
-}
+export const isValidCandidate = (candidate: Candidate): boolean =>
+  [...candidate.tags].some((tag) => !tag.includes("u") && !tag.includes("d")) && !candidate.startOrEndStopwords;
 
 /**
  * Computes the final YAKE multi-word score (lower is better).
  */
-export function scoreCandidate(candidate: Candidate, coGraph: CooccurrenceGraph): void {
+export const scoreCandidate = (candidate: Candidate, coGraph: CooccurrenceGraph): void => {
   let sumH = 0;
   let prodH = 1;
 
@@ -98,4 +89,4 @@ export function scoreCandidate(candidate: Candidate, coGraph: CooccurrenceGraph)
   }
 
   candidate.h = prodH / ((sumH + 1) * candidate.tf);
-}
+};

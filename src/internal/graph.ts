@@ -8,25 +8,17 @@ export interface CooccurrenceGraph {
   readonly incoming: Map<number, Map<number, number>>;
 }
 
-export function createGraph(): CooccurrenceGraph {
-  return { outgoing: new Map(), incoming: new Map() };
-}
+export const createGraph = (): CooccurrenceGraph => ({ outgoing: new Map(), incoming: new Map() });
 
-export function addNode(graph: CooccurrenceGraph, id: number): void {
-  if (!graph.outgoing.has(id)) {
-    graph.outgoing.set(id, new Map());
-  }
+export const addNode = (graph: CooccurrenceGraph, id: number): void => {
+  if (!graph.outgoing.has(id)) graph.outgoing.set(id, new Map());
+  if (!graph.incoming.has(id)) graph.incoming.set(id, new Map());
+};
 
-  if (!graph.incoming.has(id)) {
-    graph.incoming.set(id, new Map());
-  }
-}
+export const hasEdge = (graph: CooccurrenceGraph, source: number, target: number): boolean =>
+  graph.outgoing.get(source)?.has(target) ?? false;
 
-export function hasEdge(graph: CooccurrenceGraph, source: number, target: number): boolean {
-  return graph.outgoing.get(source)?.has(target) ?? false;
-}
-
-export function incrementEdge(graph: CooccurrenceGraph, source: number, target: number, delta = 1): void {
+export const incrementEdge = (graph: CooccurrenceGraph, source: number, target: number, delta = 1): void => {
   addNode(graph, source);
   addNode(graph, target);
 
@@ -36,32 +28,21 @@ export function incrementEdge(graph: CooccurrenceGraph, source: number, target: 
 
   outgoingEdges.set(target, nextWeight);
   incomingEdges.set(source, nextWeight);
-}
+};
 
-export function getWeight(graph: CooccurrenceGraph, source: number, target: number): number {
-  return graph.outgoing.get(source)?.get(target) ?? 0;
-}
+export const getWeight = (graph: CooccurrenceGraph, source: number, target: number): number =>
+  graph.outgoing.get(source)?.get(target) ?? 0;
 
-export function outDegree(graph: CooccurrenceGraph, id: number): number {
-  return graph.outgoing.get(id)?.size ?? 0;
-}
+export const outDegree = (graph: CooccurrenceGraph, id: number): number => graph.outgoing.get(id)?.size ?? 0;
 
-export function inDegree(graph: CooccurrenceGraph, id: number): number {
-  return graph.incoming.get(id)?.size ?? 0;
-}
+export const inDegree = (graph: CooccurrenceGraph, id: number): number => graph.incoming.get(id)?.size ?? 0;
 
-export function outWeightSum(graph: CooccurrenceGraph, id: number): number {
-  return sum(graph.outgoing.get(id)?.values());
-}
+export const outWeightSum = (graph: CooccurrenceGraph, id: number): number => sum(graph.outgoing.get(id)?.values());
 
-export function inWeightSum(graph: CooccurrenceGraph, id: number): number {
-  return sum(graph.incoming.get(id)?.values());
-}
+export const inWeightSum = (graph: CooccurrenceGraph, id: number): number => sum(graph.incoming.get(id)?.values());
 
-function sum(values: Iterable<number> | undefined): number {
+const sum = (values: Iterable<number> | undefined): number => {
   let total = 0;
-  for (const value of values ?? []) {
-    total += value;
-  }
+  for (const value of values ?? []) total += value;
   return total;
-}
+};

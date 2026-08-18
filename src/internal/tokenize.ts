@@ -31,18 +31,62 @@ const ASCII_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
  */
 const COMMON_ABBREVIATIONS = new Set([
   // Honorifics / titles
-  "dr", "mr", "mrs", "ms", "msgr", "prof", "rev", "hon",
-  "sr", "sra", "srta", "jr", "st", "capt", "col", "gen", "sgt",
+  "dr",
+  "mr",
+  "mrs",
+  "ms",
+  "msgr",
+  "prof",
+  "rev",
+  "hon",
+  "sr",
+  "sra",
+  "srta",
+  "jr",
+  "st",
+  "capt",
+  "col",
+  "gen",
+  "sgt",
   // Latin / general
-  "etc", "e.g", "i.e", "vs", "cf", "al", "ca", "approx",
+  "etc",
+  "e.g",
+  "i.e",
+  "vs",
+  "cf",
+  "al",
+  "ca",
+  "approx",
   // Numbering / citation
-  "no", "nos", "nr", "vol", "ed", "pp", "fig", "figs",
+  "no",
+  "nos",
+  "nr",
+  "vol",
+  "ed",
+  "pp",
+  "fig",
+  "figs",
   // Geographic
-  "u.s", "u.k", "mt",
+  "u.s",
+  "u.k",
+  "mt",
   // Academic
-  "univ", "phil", "sci",
+  "univ",
+  "phil",
+  "sci",
   // Months (except "may" — see doc comment above)
-  "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec",
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "sept",
+  "oct",
+  "nov",
+  "dec",
 ]);
 
 const SENTENCE_CLOSERS = new Set([`"`, `'`, ")", "]", "}", "»", "”", "’"]);
@@ -56,7 +100,7 @@ export const DEFAULT_EXCLUDE = new Set(ASCII_PUNCTUATION.split(""));
 /**
  * Applies YAKE-style prefiltering before sentence/token processing.
  */
-export function preFilter(text: string): string {
+export const preFilter = (text: string): string => {
   const parts = text.split("\n");
   let buffer = "";
 
@@ -66,12 +110,12 @@ export function preFilter(text: string): string {
   }
 
   return buffer;
-}
+};
 
 /**
  * Splits text into YAKE-style tokens.
  */
-export function tokenizeWords(text: string): string[] {
+export const tokenizeWords = (text: string): string[] => {
   const tokens = text.match(TOKEN_PATTERN) ?? [];
   const expanded: string[] = [];
 
@@ -112,12 +156,12 @@ export function tokenizeWords(text: string): string[] {
   }
 
   return expanded;
-}
+};
 
 /**
  * Splits text into sentence strings.
  */
-export function splitSentences(text: string): string[] {
+export const splitSentences = (text: string): string[] => {
   const sentences: string[] = [];
   let start = 0;
   let index = 0;
@@ -159,15 +203,13 @@ export function splitSentences(text: string): string[] {
 
   pushSentence(sentences, text.slice(start));
   return sentences;
-}
+};
 
-function splitContractions(token: string): string[] {
+const splitContractions = (token: string): string[] => {
   const normalized = token.toLowerCase();
   const apostropheIndex = Math.max(normalized.lastIndexOf("'"), normalized.lastIndexOf("’"));
 
-  if (apostropheIndex <= 0 || apostropheIndex >= token.length - 1) {
-    return [token];
-  }
+  if (apostropheIndex <= 0 || apostropheIndex >= token.length - 1) return [token];
 
   const base = token.slice(0, apostropheIndex);
   const suffix = token.slice(apostropheIndex);
@@ -182,201 +224,152 @@ function splitContractions(token: string): string[] {
   }
 
   return [token];
-}
+};
 
-function consumeEllipsis(tokens: string[], startIndex: number): { value: string; endIndex: number } | null {
+const consumeEllipsis = (tokens: string[], startIndex: number): { value: string; endIndex: number } | null => {
   let endIndex = startIndex;
   while (tokens[endIndex + 1] === ".") {
     endIndex += 1;
   }
 
   const dotCount = endIndex - startIndex + 1;
-  if (dotCount < 3) {
-    return null;
-  }
+  return dotCount < 3 ? null : { value: ".".repeat(dotCount), endIndex };
+};
 
-  return {
-    value: ".".repeat(dotCount),
-    endIndex,
-  };
-}
-
-function shouldAttachTrailingPeriod(token: string, nextNextToken?: string, tokenAfterCloser?: string): boolean {
+const shouldAttachTrailingPeriod = (token: string, nextNextToken?: string, tokenAfterCloser?: string): boolean => {
   const normalized = token.toLowerCase();
-  if (token.includes(".") || COMMON_ABBREVIATIONS.has(normalized)) {
-    return true;
-  }
+  if (token.includes(".") || COMMON_ABBREVIATIONS.has(normalized)) return true;
   // Keep `word.` attached when a sentence closer follows AND there is more text after it.
   // When the closer is the last token of the input (e.g. `Histórias."` at end of a sentence)
   // the period is left as its own token instead.
   return nextNextToken != null && SENTENCE_CLOSERS.has(nextNextToken) && tokenAfterCloser != null;
-}
+};
 
-function shouldAttachTrailingPunctuation(token: string): boolean {
-  return /[\p{L}\p{M}\p{Nd}]$/u.test(token);
-}
+const shouldAttachTrailingPunctuation = (token: string): boolean => /[\p{L}\p{M}\p{Nd}]$/u.test(token);
 
-function isSentenceTerminal(char: string): boolean {
-  return char === "." || char === "!" || char === "?";
-}
+const isSentenceTerminal = (char: string): boolean => char === "." || char === "!" || char === "?";
 
-function shouldSplitSentence(text: string, sentenceStart: number, punctuationIndex: number, nextIndex: number): boolean {
-  if (nextIndex >= text.length) {
-    return true;
-  }
+const shouldSplitSentence = (
+  text: string,
+  sentenceStart: number,
+  punctuationIndex: number,
+  nextIndex: number,
+): boolean => {
+  if (nextIndex >= text.length) return true;
 
   const punctuation = text[punctuationIndex]!;
-  if (punctuation !== ".") {
-    return nextIndex > punctuationIndex + 1;
-  }
+  if (punctuation !== ".") return nextIndex > punctuationIndex + 1;
 
-  if (isDecimalPoint(text, punctuationIndex) || isInitialism(text, punctuationIndex)) {
-    return false;
-  }
+  if (isDecimalPoint(text, punctuationIndex) || isInitialism(text, punctuationIndex)) return false;
 
   const previousWord = getPreviousWord(text, punctuationIndex).toLowerCase();
-  if (COMMON_ABBREVIATIONS.has(previousWord)) {
-    return false;
-  }
+  if (COMMON_ABBREVIATIONS.has(previousWord)) return false;
 
-  if (text[punctuationIndex + 1] === "»" && leadingSentenceChar(text, sentenceStart) === "«") {
-    return false;
-  }
+  if (text[punctuationIndex + 1] === "»" && leadingSentenceChar(text, sentenceStart) === "«") return false;
 
   return nextIndex > punctuationIndex + 1;
-}
+};
 
-function leadingSentenceChar(text: string, sentenceStart: number): string {
+const leadingSentenceChar = (text: string, sentenceStart: number): string => {
   let cursor = sentenceStart;
   while (cursor < text.length && /\s/u.test(text[cursor]!)) {
     cursor += 1;
   }
   return text[cursor] ?? "";
-}
+};
 
-function isDecimalPoint(text: string, punctuationIndex: number): boolean {
-  return isDigit(text[punctuationIndex - 1] ?? "") && isDigit(text[punctuationIndex + 1] ?? "");
-}
+const isDecimalPoint = (text: string, punctuationIndex: number): boolean =>
+  isDigit(text[punctuationIndex - 1] ?? "") && isDigit(text[punctuationIndex + 1] ?? "");
 
-function isInitialism(text: string, punctuationIndex: number): boolean {
+const isInitialism = (text: string, punctuationIndex: number): boolean => {
   const left = text.slice(0, punctuationIndex + 1);
-  if (/(?:\b\p{L}\.){2,}$/u.test(left)) {
-    return true;
-  }
+  if (/(?:\b\p{L}\.){2,}$/u.test(left)) return true;
 
-  return isLetter(text[punctuationIndex - 1] ?? "") && isLetter(text[punctuationIndex + 1] ?? "") && text[punctuationIndex + 2] === ".";
-}
+  return (
+    isLetter(text[punctuationIndex - 1] ?? "") &&
+    isLetter(text[punctuationIndex + 1] ?? "") &&
+    text[punctuationIndex + 2] === "."
+  );
+};
 
-function getPreviousWord(text: string, punctuationIndex: number): string {
+const getPreviousWord = (text: string, punctuationIndex: number): string => {
   let start = punctuationIndex - 1;
   while (start >= 0 && isWordChar(text[start]!)) {
     start -= 1;
   }
 
   return text.slice(start + 1, punctuationIndex);
-}
+};
 
-function isWordChar(char: string): boolean {
-  return /^[\p{L}\p{M}\p{Nd}]$/u.test(char);
-}
+const isWordChar = (char: string): boolean => /^[\p{L}\p{M}\p{Nd}]$/u.test(char);
 
-function skipWhitespace(text: string, index: number): number {
+const skipWhitespace = (text: string, index: number): number => {
   let cursor = index;
   while (cursor < text.length && /\s/u.test(text[cursor]!)) {
     cursor += 1;
   }
   return cursor;
-}
+};
 
-function pushSentence(sentences: string[], sentence: string): void {
+const pushSentence = (sentences: string[], sentence: string): void => {
   const trimmed = sentence.trim();
-  if (trimmed.length > 0) {
-    sentences.push(trimmed);
-  }
-}
+  if (trimmed.length > 0) sentences.push(trimmed);
+};
 
 /**
  * Returns the YAKE tag used for candidate generation and scoring:
  * "d" digit, "u" unusual (mixed alnum/punct), "a" acronym, "n" proper noun, "p" plain.
  */
-export function getTag(word: string, index: number, exclude: ReadonlySet<string>): string {
+export const getTag = (word: string, index: number, exclude: ReadonlySet<string>): string => {
   const withoutCommas = word.replaceAll(",", "");
-  if (isNumeric(withoutCommas) || isNumeric(withoutCommas.replace(".", ""))) {
-    return "d";
-  }
+  if (isNumeric(withoutCommas) || isNumeric(withoutCommas.replace(".", ""))) return "d";
 
   let digitCount = 0;
   let alphaCount = 0;
   let excludeCount = 0;
 
   for (const char of word) {
-    if (isDigit(char)) {
-      digitCount += 1;
-    }
-    if (isLetter(char)) {
-      alphaCount += 1;
-    }
-    if (exclude.has(char)) {
-      excludeCount += 1;
-    }
+    if (isDigit(char)) digitCount += 1;
+    if (isLetter(char)) alphaCount += 1;
+    if (exclude.has(char)) excludeCount += 1;
   }
 
-  if ((digitCount > 0 && alphaCount > 0) || (digitCount === 0 && alphaCount === 0) || excludeCount > 1) {
-    return "u";
-  }
+  if ((digitCount > 0 && alphaCount > 0) || (digitCount === 0 && alphaCount === 0) || excludeCount > 1) return "u";
 
-  if (isAllUpper(word)) {
-    return "a";
-  }
+  if (isAllUpper(word)) return "a";
 
-  if (word.length > 1 && isUpper(word[0]!) && index > 0 && countUppercase(word) === 1) {
-    return "n";
-  }
+  if (word.length > 1 && isUpper(word[0]!) && index > 0 && countUppercase(word) === 1) return "n";
 
   return "p";
-}
+};
 
-function isNumeric(value: string): boolean {
-  return /^\d+$/.test(value);
-}
+const isNumeric = (value: string): boolean => /^\d+$/.test(value);
 
-function isDigit(char: string): boolean {
-  return /^\p{Nd}$/u.test(char);
-}
+const isDigit = (char: string): boolean => /^\p{Nd}$/u.test(char);
 
-function isLetter(char: string): boolean {
-  return /^\p{L}$/u.test(char);
-}
+const isLetter = (char: string): boolean => /^\p{L}$/u.test(char);
 
-function isUpper(char: string): boolean {
-  return char.toUpperCase() === char && char.toLowerCase() !== char;
-}
+const isUpper = (char: string): boolean => char.toUpperCase() === char && char.toLowerCase() !== char;
 
-function isAllUpper(word: string): boolean {
+const isAllUpper = (word: string): boolean => {
   let sawLetter = false;
 
   for (const char of word) {
-    if (!isLetter(char)) {
-      continue;
-    }
+    if (!isLetter(char)) continue;
 
     sawLetter = true;
-    if (!isUpper(char)) {
-      return false;
-    }
+    if (!isUpper(char)) return false;
   }
 
   return sawLetter;
-}
+};
 
-function countUppercase(word: string): number {
+const countUppercase = (word: string): number => {
   let count = 0;
 
   for (const char of word) {
-    if (isUpper(char)) {
-      count += 1;
-    }
+    if (isUpper(char)) count += 1;
   }
 
   return count;
-}
+};

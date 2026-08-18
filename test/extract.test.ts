@@ -1,6 +1,5 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
-import { extractKeywords } from "../dist/extract.js";
+import { describe, expect, test } from "bun:test";
+import { extractKeywords } from "../src/extract.ts";
 
 const KAGGLE_TEXT = `
 Google is acquiring data science community Kaggle. Sources tell us that Google is acquiring Kaggle, a platform that hosts data science and machine learning
@@ -27,35 +26,37 @@ since its   launch in 2010. Investors in Kaggle include Index Ventures, SV Angel
 Google chief economist Hal Varian, Khosla Ventures and Yuri Milner
 `;
 
-test("real article: non-empty, sorted ascending, within limit, recognizable top keyword", () => {
-  const results = extractKeywords(KAGGLE_TEXT, { limit: 10 });
+describe("extractKeywords", () => {
+  test("real article: non-empty, sorted ascending, within limit, recognizable top keyword", () => {
+    const results = extractKeywords(KAGGLE_TEXT, { limit: 10 });
 
-  assert.ok(results.length > 0);
-  assert.ok(results.length <= 10);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.length).toBeLessThanOrEqual(10);
 
-  for (let i = 1; i < results.length; i += 1) {
-    assert.ok(results[i - 1]!.score <= results[i]!.score);
-  }
+    for (let i = 1; i < results.length; i += 1) {
+      expect(results[i - 1]!.score).toBeLessThanOrEqual(results[i]!.score);
+    }
 
-  assert.ok(results.some((k) => k.normalized === "google" || k.normalized === "kaggle"));
-});
+    expect(results.some((k) => k.normalized === "google" || k.normalized === "kaggle")).toBe(true);
+  });
 
-test("empty input returns empty array", () => {
-  assert.deepEqual(extractKeywords(""), []);
-});
+  test("empty input returns empty array", () => {
+    expect(extractKeywords("")).toEqual([]);
+  });
 
-test("all-stopword input returns empty array", () => {
-  assert.deepEqual(extractKeywords("the a an is are was were"), []);
-});
+  test("all-stopword input returns empty array", () => {
+    expect(extractKeywords("the a an is are was were")).toEqual([]);
+  });
 
-test("short session-naming input returns something sane", () => {
-  const results = extractKeywords("fix flaky auth test in login flow");
-  assert.ok(results.length > 0);
-  assert.ok(results.every((k) => k.keyword.length > 0));
-});
+  test("short session-naming input returns something sane", () => {
+    const results = extractKeywords("fix flaky auth test in login flow");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((k) => k.keyword.length > 0)).toBe(true);
+  });
 
-test("dedupeThreshold: 1 disables dedup, so keeps >= as many candidates as default", () => {
-  const withDedup = extractKeywords(KAGGLE_TEXT, { limit: 50 });
-  const withoutDedup = extractKeywords(KAGGLE_TEXT, { limit: 50, dedupeThreshold: 1 });
-  assert.ok(withoutDedup.length >= withDedup.length);
+  test("dedupeThreshold: 1 disables dedup, so keeps >= as many candidates as default", () => {
+    const withDedup = extractKeywords(KAGGLE_TEXT, { limit: 50 });
+    const withoutDedup = extractKeywords(KAGGLE_TEXT, { limit: 50, dedupeThreshold: 1 });
+    expect(withoutDedup.length).toBeGreaterThanOrEqual(withDedup.length);
+  });
 });

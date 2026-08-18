@@ -21,34 +21,27 @@ export interface ResolvedOptions {
   stopwords: Set<string>;
 }
 
-const DEFAULT_MAX_NGRAM_SIZE = 3;
-const DEFAULT_WINDOW_SIZE = 1;
-const DEFAULT_DEDUPE_THRESHOLD = 0.9;
-const DEFAULT_LIMIT = 10;
+const DEFAULTS = {
+  maxNgramSize: 3,
+  windowSize: 1,
+  dedupeThreshold: 0.9,
+  limit: 10,
+} as const satisfies Record<string, number>;
 
-export function resolveOptions(options: YakeTsOptions = {}): ResolvedOptions {
-  const maxNgramSize = options.maxNgramSize ?? DEFAULT_MAX_NGRAM_SIZE;
-  const windowSize = options.windowSize ?? DEFAULT_WINDOW_SIZE;
-  const dedupeThreshold = options.dedupeThreshold ?? DEFAULT_DEDUPE_THRESHOLD;
-  const limit = options.limit ?? DEFAULT_LIMIT;
+const withDefault = <K extends keyof typeof DEFAULTS>(key: K, value: number | undefined) =>
+  typeof value === typeof DEFAULTS[key] ? (value as number) : DEFAULTS[key];
 
-  for (const [name, value] of [
-    ["maxNgramSize", maxNgramSize],
-    ["windowSize", windowSize],
-    ["limit", limit],
-  ] as const) {
-    if (!Number.isInteger(value) || value < 1) {
-      throw new TypeError(`${name} must be a positive integer, got ${value}.`);
-    }
-  }
-
-  if (!Number.isFinite(dedupeThreshold) || dedupeThreshold < 0) {
-    throw new TypeError(`dedupeThreshold must be a finite non-negative number, got ${dedupeThreshold}.`);
-  }
-
-  const stopwords = options.stopwords == null
-    ? new Set(ENGLISH_STOPWORDS)
-    : new Set([...options.stopwords].map((word) => word.toLowerCase()));
-
-  return { maxNgramSize, windowSize, dedupeThreshold, limit, stopwords };
-}
+export const resolveOptions = ({
+  maxNgramSize,
+  windowSize,
+  dedupeThreshold,
+  limit,
+  stopwords,
+}: YakeTsOptions = {}): ResolvedOptions => ({
+  maxNgramSize: withDefault("maxNgramSize", maxNgramSize),
+  windowSize: withDefault("windowSize", windowSize),
+  dedupeThreshold: withDefault("dedupeThreshold", dedupeThreshold),
+  limit: withDefault("limit", limit),
+  stopwords:
+    stopwords == null ? new Set(ENGLISH_STOPWORDS) : new Set(Array.from(stopwords, (word) => word.toLowerCase())),
+});

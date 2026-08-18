@@ -1,5 +1,12 @@
-import { createCandidate, isValidCandidate, mergeCandidateTags, scoreCandidate, type Candidate, type NormalizedCandidateTerm } from "./composed-word.js";
-import { addNode, createGraph, incrementEdge, type CooccurrenceGraph } from "./graph.js";
+import {
+  type Candidate,
+  createCandidate,
+  isValidCandidate,
+  mergeCandidateTags,
+  type NormalizedCandidateTerm,
+  scoreCandidate,
+} from "./composed-word.js";
+import { addNode, type CooccurrenceGraph, createGraph, incrementEdge } from "./graph.js";
 import { addOccurrence, createTerm, scoreTerm, type TermState } from "./single-word.js";
 import { DEFAULT_EXCLUDE, getTag, preFilter, splitSentences, tokenizeWords } from "./tokenize.js";
 
@@ -17,6 +24,8 @@ export interface DocumentConfig {
   maxNgramSize: number;
 }
 
+const startsWithApostrophe = (token: string): boolean => token.startsWith("'") || token.startsWith("’");
+
 /**
  * Builds the document state (terms, co-occurrence graph, candidates) the
  * YAKE scoring pipeline runs over. One function call per extraction — the
@@ -24,7 +33,7 @@ export interface DocumentConfig {
  * closures over a builder object, since none of them are ever called
  * outside this one build.
  */
-export function buildDocument(text: string, stopwordSet: Set<string>, config: DocumentConfig): Document {
+export const buildDocument = (text: string, stopwordSet: Set<string>, config: DocumentConfig): Document => {
   const graph = createGraph();
   const terms = new Map<string, TermState>();
   const candidates = new Map<string, Candidate>();
@@ -32,7 +41,7 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
   const tagsToDiscard = new Set(["u", "d"]);
   let candidateOrder = 0;
 
-  function getTerm(normalizedWord: string): TermState {
+  const getTerm = (normalizedWord: string): TermState => {
     let uniqueTerm = normalizedWord;
     const simpleStopword = stopwordSet.has(uniqueTerm);
 
@@ -41,9 +50,7 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
     }
 
     const existing = terms.get(uniqueTerm);
-    if (existing != null) {
-      return existing;
-    }
+    if (existing != null) return existing;
 
     let simpleUniqueTerm = uniqueTerm;
     for (const punctuation of exclude) {
@@ -57,9 +64,9 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
     terms.set(uniqueTerm, term);
 
     return term;
-  }
+  };
 
-  function addOrUpdateCandidate(candidate: Candidate): void {
+  const addOrUpdateCandidate = (candidate: Candidate): void => {
     const existing = candidates.get(candidate.uniqueKw);
 
     if (existing == null) {
@@ -71,9 +78,16 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
     }
 
     candidates.get(candidate.uniqueKw)!.tf += 1;
-  }
+  };
 
-  function generateCandidates(tag: string, word: string, normalizedWord: string, termObj: TermState, blockOfWordObj: BlockWord[], maxNgramSize: number): void {
+  const generateCandidates = (
+    tag: string,
+    word: string,
+    normalizedWord: string,
+    termObj: TermState,
+    blockOfWordObj: BlockWord[],
+    maxNgramSize: number,
+  ): void => {
     const candidateTerms: NormalizedCandidateTerm[] = [[tag, word, termObj, normalizedWord]];
     addOrUpdateCandidate(createCandidate(candidateTerms));
 
@@ -82,9 +96,9 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
       candidateTerms.push(blockOfWordObj[index]!);
       addOrUpdateCandidate(createCandidate([...candidateTerms].reverse()));
     }
-  }
+  };
 
-  function updateCooccurrence(blockOfWordObj: BlockWord[], termObj: TermState, windowSize: number): void {
+  const updateCooccurrence = (blockOfWordObj: BlockWord[], termObj: TermState, windowSize: number): void => {
     const start = Math.max(0, blockOfWordObj.length - windowSize);
 
     for (let index = start; index < blockOfWordObj.length; index += 1) {
@@ -93,9 +107,17 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
         incrementEdge(graph, blockWord[2].id, termObj.id);
       }
     }
-  }
+  };
 
-  function processWord(word: string, posText: number, sentenceId: number, posSent: number, blockOfWordObj: BlockWord[], windowSize: number, maxNgramSize: number): number {
+  const processWord = (
+    word: string,
+    posText: number,
+    sentenceId: number,
+    posSent: number,
+    blockOfWordObj: BlockWord[],
+    windowSize: number,
+    maxNgramSize: number,
+  ): number => {
     const normalizedWord = word.toLowerCase();
     const tag = getTag(word, posSent, exclude);
     const termObj = getTerm(normalizedWord);
@@ -110,9 +132,15 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
     blockOfWordObj.push([tag, word, termObj, normalizedWord]);
 
     return posText + 1;
-  }
+  };
 
-  function processSentence(sentence: string[], sentenceId: number, posText: number, windowSize: number, maxNgramSize: number): number {
+  const processSentence = (
+    sentence: string[],
+    sentenceId: number,
+    posText: number,
+    windowSize: number,
+    maxNgramSize: number,
+  ): number => {
     const blockOfWordObj: BlockWord[] = [];
 
     for (const [posSent, word] of sentence.entries()) {
@@ -125,10 +153,12 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
     }
 
     return posText;
-  }
+  };
 
   const sentences = splitSentences(preFilter(text))
-    .map((sentence) => tokenizeWords(sentence).filter((token) => !(startsWithApostrophe(token) && token.length > 1) && token.length > 0))
+    .map((sentence) =>
+      tokenizeWords(sentence).filter((token) => !(startsWithApostrophe(token) && token.length > 1) && token.length > 0),
+    )
     .filter((sentence) => sentence.length > 0);
 
   let posText = 0;
@@ -137,39 +167,31 @@ export function buildDocument(text: string, stopwordSet: Set<string>, config: Do
   }
 
   return { graph, terms, candidates, numberOfSentences: sentences.length };
-}
+};
 
 /**
  * Computes single-word YAKE features for every term in the document.
  */
-export function scoreSingleTerms(document: Document): void {
+export const scoreSingleTerms = (document: Document): void => {
   const validTerms = [...document.terms.values()].filter((term) => !term.stopword);
-  if (validTerms.length === 0) {
-    return;
-  }
+  if (validTerms.length === 0) return;
 
   const validTfs = validTerms.map((term) => term.tf);
   const avgTf = validTfs.reduce((sum, value) => sum + value, 0) / validTfs.length;
-  const stdTf = Math.sqrt(validTfs.reduce((sum, value) => sum + ((value - avgTf) ** 2), 0) / validTfs.length);
+  const stdTf = Math.sqrt(validTfs.reduce((sum, value) => sum + (value - avgTf) ** 2, 0) / validTfs.length);
   const maxTf = Math.max(...[...document.terms.values()].map((term) => term.tf));
 
   const stats = { maxTf, avgTf, stdTf, numberOfSentences: document.numberOfSentences };
   for (const term of document.terms.values()) {
     scoreTerm(term, document.graph, stats);
   }
-}
+};
 
 /**
  * Computes multi-word YAKE features for every valid candidate.
  */
-export function scoreAllCandidates(document: Document): void {
+export const scoreAllCandidates = (document: Document): void => {
   for (const candidate of document.candidates.values()) {
-    if (isValidCandidate(candidate)) {
-      scoreCandidate(candidate, document.graph);
-    }
+    if (isValidCandidate(candidate)) scoreCandidate(candidate, document.graph);
   }
-}
-
-function startsWithApostrophe(token: string): boolean {
-  return token.startsWith("'") || token.startsWith("’");
-}
+};

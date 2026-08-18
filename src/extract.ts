@@ -1,7 +1,7 @@
-import { buildDocument, scoreAllCandidates, scoreSingleTerms } from "./internal/data-core.js";
-import { isValidCandidate, type Candidate } from "./internal/composed-word.js";
-import { levenshteinSimilarity } from "./similarity.js";
 import { resolveOptions, type YakeTsOptions } from "./config.js";
+import { type Candidate, isValidCandidate } from "./internal/composed-word.js";
+import { buildDocument, scoreAllCandidates, scoreSingleTerms } from "./internal/data-core.js";
+import { levenshteinSimilarity } from "./similarity.js";
 
 export interface Keyword {
   /** Surface form as it appeared in the source text. */
@@ -14,10 +14,21 @@ export interface Keyword {
   occurrences: number;
 }
 
-export function extractKeywords(text: string, options: YakeTsOptions = {}): Keyword[] {
-  if (!text) {
-    return [];
-  }
+const compareCandidates = (a: Candidate, b: Candidate): number => {
+  const delta = a.h - b.h;
+  return Math.abs(delta) > 1e-15 ? delta : a.order - b.order;
+};
+
+const toKeyword = (candidate: Candidate): Keyword => ({
+  keyword: candidate.kw,
+  normalized: candidate.uniqueKw,
+  score: candidate.h,
+  ngramSize: candidate.size,
+  occurrences: candidate.tf,
+});
+
+export const extractKeywords = (text: string, options: YakeTsOptions = {}): Keyword[] => {
+  if (!text) return [];
 
   const resolved = resolveOptions(options);
   const document = buildDocument(text, resolved.stopwords, {
@@ -28,9 +39,7 @@ export function extractKeywords(text: string, options: YakeTsOptions = {}): Keyw
   scoreSingleTerms(document);
   scoreAllCandidates(document);
 
-  const candidates = [...document.candidates.values()]
-    .filter((candidate) => isValidCandidate(candidate))
-    .sort(compareCandidates);
+  const candidates = [...document.candidates.values()].filter(isValidCandidate).sort(compareCandidates);
 
   if (resolved.dedupeThreshold >= 1) {
     return candidates.slice(0, resolved.limit).map(toKeyword);
@@ -41,31 +50,9 @@ export function extractKeywords(text: string, options: YakeTsOptions = {}): Keyw
     const isDuplicate = kept.some(
       (existing) => levenshteinSimilarity(candidate.uniqueKw, existing.uniqueKw) > resolved.dedupeThreshold,
     );
-    if (!isDuplicate) {
-      kept.push(candidate);
-    }
-    if (kept.length === resolved.limit) {
-      break;
-    }
+    if (!isDuplicate) kept.push(candidate);
+    if (kept.length === resolved.limit) break;
   }
 
   return kept.map(toKeyword);
-}
-
-function compareCandidates(a: Candidate, b: Candidate): number {
-  const delta = a.h - b.h;
-  if (Math.abs(delta) > 1e-15) {
-    return delta;
-  }
-  return a.order - b.order;
-}
-
-function toKeyword(candidate: Candidate): Keyword {
-  return {
-    keyword: candidate.kw,
-    normalized: candidate.uniqueKw,
-    score: candidate.h,
-    ngramSize: candidate.size,
-    occurrences: candidate.tf,
-  };
-}
+};

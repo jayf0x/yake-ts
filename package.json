@@ -1,9 +1,11 @@
 {
   "name": "yake-ts",
   "version": "0.1.0",
-  "description": "Tiny, dependency-free, English-only YAKE keyword extractor.",
   "type": "module",
-  "main": "./dist/index.js",
+  "description": "Tiny, dependency-free, English-only YAKE keyword extractor — no classes, no caching, one pure function.",
+  "author": "jayF0x",
+  "license": "MIT",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -12,17 +14,52 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "CHANGELOG.md"
   ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "bunx --bun vite build --config config/vite.config.ts",
+    "dev": "bunx --bun vite build --watch --config config/vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "format": "biome check --write .",
+    "format:check": "biome check .",
+    "lint": "biome lint ./src",
+    "lint:fix": "biome lint --write ./src",
+    "npm:deploy": "bash ./scripts/npm/publish-npm.sh",
+    "repo:bootstrap": "bash ./scripts/bootstap.sh"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.9",
+    "bun-types": "^1.3.14",
+    "taglify": "^1.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.1",
+    "vite-plugin-dts": "^4.5.4"
+  },
   "engines": {
     "node": ">=18"
   },
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test test/*.ts"
+  "keywords": [
+    "yake",
+    "keyword-extraction",
+    "keyword-extractor",
+    "nlp",
+    "text-analysis",
+    "typescript",
+    "unsupervised",
+    "zero-dependency",
+    "session-naming",
+    "text-mining"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayf0x/yake-ts.git"
   },
-  "devDependencies": {
-    "typescript": "^5.9.3"
-  },
-  "license": "MIT"
+  "homepage": "https://github.com/jayf0x/yake-ts#readme",
+  "bugs": {
+    "url": "https://github.com/jayf0x/yake-ts/issues"
+  }
 }
