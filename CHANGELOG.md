@@ -3,6 +3,10 @@
 All notable changes to `yake-ts`. Dates are release dates; versions follow
 [semver](https://semver.org/).
 
+## 1.2.1 — 2026-08-18
+
+- Internal and tooling changes only.
+
 ## 1.2.0 — 2026-08-18
 
 - Initial release of yake-ts: dependency-free YAKE keyword extractor with `extractKeywords()` pure function
