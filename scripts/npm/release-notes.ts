@@ -39,7 +39,7 @@ if (!commits) {
   process.exit(0);
 }
 
-const prompt = `Summarize an npm release of "yake-ts" (a tiny, dependency-free, English-only YAKE keyword extractor).
+const prompt = `Summarize an npm release of "yake-ts" (a tiny, dependency-free YAKE keyword extractor).
 
 New version: ${version}
 Previous tag: ${prevTag || "(none)"}

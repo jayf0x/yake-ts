@@ -2,11 +2,10 @@
  * Text preprocessing: paragraph-aware normalization, sentence splitting,
  * word tokenization, and YAKE-style word tagging.
  *
- * Adapted from research/yaket/src/utils.ts (see docs/research-report.md for
- * provenance) — this is the fiddliest part of the algorithm to get right
- * (contraction handling, abbreviation-aware sentence boundaries, Unicode
- * word chars) so the logic is kept close to the original rather than
- * hand-rewritten from scratch.
+ * Adapted from research/yaket/src/utils.ts — this is the fiddliest part of
+ * the algorithm to get right (contraction handling, abbreviation-aware
+ * sentence boundaries, Unicode word chars) so the logic is kept close to
+ * the original rather than hand-rewritten from scratch.
  */
 
 const CAPITAL_LETTER_PATTERN = /^(\s*([A-Z]))/;
@@ -21,7 +20,10 @@ const ASCII_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
  * depends on: opt/homebrew/lib/python3.14/site-packages/segtok/segmenter.py,
  * the `ABBREVIATIONS` list). segtok's list is multi-language (German,
  * Spanish month names, etc.); this keeps only the English-relevant subset
- * plus honorifics segtok doesn't cover, since this package is English-only.
+ * plus honorifics segtok doesn't cover. This particular list stays
+ * English-specific even though other languages' stopwords are supported
+ * (see src/stopwords/) — abbreviation-aware sentence splitting isn't
+ * per-language here, so non-English text just won't get this refinement.
  *
  * Deliberately excludes "may": segtok includes it as a month abbreviation,
  * but in short English chat/session text "may" is overwhelmingly the modal
