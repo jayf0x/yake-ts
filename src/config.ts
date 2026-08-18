@@ -1,3 +1,7 @@
+// Only the English default is imported here, deliberately — statically importing every
+// src/stopwords/*.ts file would bundle all 33 languages into every consumer, English-only
+// users included. Other languages are separate subpath exports (yake-ts/stopwords/<code>);
+// see the `stopwords` option doc below.
 import { STOPWORDS as ENGLISH_STOPWORDS } from "./stopwords/en.js";
 
 export interface YakeTsOptions {
@@ -9,7 +13,12 @@ export interface YakeTsOptions {
   dedupeThreshold?: number;
   /** Max number of keywords to return. Default 10. */
   limit?: number;
-  /** Stopwords to use; defaults to bundled English. Pass your own set for other languages. */
+  /**
+   * Stopwords to use. Defaults to bundled English. For other languages, import
+   * `STOPWORDS` from `yake-ts/stopwords/<code>` (e.g. `yake-ts/stopwords/fr`) and pass it here —
+   * each language is its own subpath export so you only pay for the ones you use. Or pass a
+   * fully custom set.
+   */
   stopwords?: Iterable<string>;
 }
 
@@ -26,22 +35,19 @@ const DEFAULTS = {
   windowSize: 1,
   dedupeThreshold: 0.9,
   limit: 10,
-} as const satisfies Record<string, number>;
-
-const withDefault = <K extends keyof typeof DEFAULTS>(key: K, value: number | undefined) =>
-  typeof value === typeof DEFAULTS[key] ? (value as number) : DEFAULTS[key];
+} satisfies Required<Omit<YakeTsOptions, "stopwords">>;
 
 export const resolveOptions = ({
+  maxNgramSize = DEFAULTS.maxNgramSize,
+  windowSize = DEFAULTS.windowSize,
+  dedupeThreshold = DEFAULTS.dedupeThreshold,
+  limit = DEFAULTS.limit,
+  stopwords,
+}: YakeTsOptions = {}): ResolvedOptions => ({
   maxNgramSize,
   windowSize,
   dedupeThreshold,
   limit,
-  stopwords,
-}: YakeTsOptions = {}): ResolvedOptions => ({
-  maxNgramSize: withDefault("maxNgramSize", maxNgramSize),
-  windowSize: withDefault("windowSize", windowSize),
-  dedupeThreshold: withDefault("dedupeThreshold", dedupeThreshold),
-  limit: withDefault("limit", limit),
   stopwords:
     stopwords == null ? new Set(ENGLISH_STOPWORDS) : new Set(Array.from(stopwords, (word) => word.toLowerCase())),
 });
