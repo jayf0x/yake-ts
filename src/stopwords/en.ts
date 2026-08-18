@@ -1,14 +1,13 @@
 /**
- * English stopwords. Vendored from research/yaket/src/stopwords.generated.ts
- * ("en" entry). English-only by design: importing yaket own bundled
- * stopword module unconditionally pulls in all 34 languages (its
- * KeywordExtractor.ts imports defaultStopwordProvider unconditionally as a
- * fallback, so no bundler can tree-shake it away even if you always pass
- * your own `stopwords` option). Shipping just English here sidesteps that
- * bundle-size trap entirely. Other languages are supported via the
- * `stopwords` option — bring your own list.
+ * English stopwords — the default `stopwords` set, bundled into the main
+ * entry point. Vendored from yaket's stopwords.generated.ts ("en" entry).
+ *
+ * Other languages live alongside this file (`./ar.ts`, `./fr.ts`, ...) but
+ * are published as separate subpath exports (`yake-ts/stopwords/<code>`)
+ * rather than re-exported here, so importing yake-ts never pulls in
+ * languages you didn't ask for. See ../index.ts and package.json#exports.
  */
-export const ENGLISH_STOPWORDS: ReadonlySet<string> = new Set([
+export const STOPWORDS: ReadonlySet<string> = new Set([
   "dr",
   "dra",
   "mr",

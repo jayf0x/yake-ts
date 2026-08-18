@@ -38,6 +38,11 @@ describe("extractKeywords", () => {
     }
 
     expect(results.some((k) => k.normalized === "google" || k.normalized === "kaggle")).toBe(true);
+
+    for (const keyword of results) {
+      expect(keyword.sentenceIds.length).toBeGreaterThan(0);
+      expect([...keyword.sentenceIds].sort((a, b) => a - b)).toEqual(keyword.sentenceIds);
+    }
   });
 
   test("empty input returns empty array", () => {

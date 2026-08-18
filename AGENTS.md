@@ -4,11 +4,18 @@ Working notes for agents/contributors on `yake-ts`.
 
 ## What this is
 
-A tiny, dependency-free, English-only [YAKE](https://github.com/LIAAD/yake) keyword extractor.
-One pure function — `extractKeywords(text, options?)` — no classes, no caching, nothing to
-instantiate. Trimmed, functional port of the algorithm core from
+A tiny, dependency-free [YAKE](https://github.com/LIAAD/yake) keyword extractor. One pure
+function — `extractKeywords(text, options?)` — no classes, no caching, nothing to instantiate.
+Trimmed, functional port of the algorithm core from
 [`@ade_oshineye/yaket`](https://www.npmjs.com/package/@ade_oshineye/yaket), vendored rather than
 depended on.
+
+English is bundled and used by default. 33 more languages ship as opt-in, tree-shakeable subpath
+exports (`yake-ts/stopwords/<code>`, e.g. `yake-ts/stopwords/fr`) — see `src/stopwords/`. The
+*tokenizer* itself stays whitespace/word-boundary based and isn't per-language, so this covers
+space-delimited languages (Latin, Cyrillic, Greek, Arabic, Devanagari scripts, ...) reasonably
+well; it does not do CJK word segmentation, so `zh`/`ja` stopwords only help if you pre-segment
+that text yourself first (see the caveat comment in those two files).
 
 ## Mental model
 
@@ -35,23 +42,30 @@ validated `ResolvedOptions` before any of the above runs.
 ## Layout
 
 - `src/index.ts` — package entry; re-exports exactly what the public API is: `extractKeywords`,
-  `Keyword`, `YakeTsOptions`. Nothing internal (stopword lists, tokenizer internals, graph) is
-  re-exported here — see the `stopwords` option instead of `ENGLISH_STOPWORDS` if you need to
-  extend the default list.
+  `Keyword`, `YakeTsOptions`. Nothing internal (tokenizer internals, graph) is re-exported here.
 - `src/extract.ts` — the public `extractKeywords` function and the `Keyword` result shape.
 - `src/config.ts` — `YakeTsOptions` (public), `ResolvedOptions` (internal), and `resolveOptions`.
 - `src/similarity.ts` — Levenshtein distance/similarity, used only for dedup.
-- `src/stopwords-en.ts` — bundled English stopword set (default `stopwords` value).
+- `src/stopwords/` — one file per language, each exporting a single `STOPWORDS: ReadonlySet<string>`.
+  `en.ts` is the default (bundled into the main entry, used automatically when `stopwords` is
+  omitted); every other file is published as its own subpath export
+  (`yake-ts/stopwords/<code>`, e.g. `yake-ts/stopwords/fr`) — pass its `STOPWORDS` set as the
+  `stopwords` option to extract from that language. Not re-exported from `src/index.ts`, so an
+  English-only consumer never pulls in the other 33 files. New languages: add
+  `src/stopwords/<code>.ts` following the existing files' shape; the build and `package.json`
+  exports both pick up new files automatically (see below), nothing else to wire up.
 - `src/internal/` — the algorithm core: `tokenize.ts`, `graph.ts`, `single-word.ts`,
   `composed-word.ts`, `data-core.ts`. Not exported from `src/index.ts`.
 - `test/extract.test.ts` — behavioral tests against `extractKeywords`, run with `bun test`.
+- `test/stopwords.test.ts` — sanity checks on the non-English stopword sets and their integration
+  via the `stopwords` option.
 
 ## Commands
 
 ```bash
 bun test               # run all tests (bun:test)
 bun run typecheck      # tsc --noEmit
-bun run build          # vite lib build → dist/index.{js,d.ts}
+bun run build          # vite lib build → dist/index.{js,d.ts} + dist/stopwords/<code>.js per language
 bun run format          # biome check --write
 ```
 
@@ -62,12 +76,21 @@ bun run format          # biome check --write
 - No classes anywhere. Every internal module is plain interfaces + functions operating on
   records created once per `extractKeywords()` call — there's no reuse across calls that would
   justify an instantiable object.
-- English-only by default (see `src/stopwords-en.ts` for why bundling every language isn't
-  tree-shakeable) — bring your own `stopwords` set for other languages via the option, don't add
-  more bundled language files.
+- English is the only stopword set bundled into the main entry point; other languages are
+  tree-shakeable subpath exports (see `src/stopwords/` above) — a consumer who never imports
+  `yake-ts/stopwords/*` pays zero bytes for the other 33 languages. Don't re-export them from
+  `src/index.ts`, that would defeat the tree-shaking.
 - Biome for format/lint (`biome.json` → `config/biome.json`). TS strict.
-- `config/vite.config.ts` builds `src/index.ts` only — internal modules are inlined into the
-  single `dist/index.js`, never published as separate entry points.
+- `config/vite.config.ts` builds `src/index.ts` as the main entry, plus one entry per
+  `src/stopwords/*.ts` (except `en.ts`, which is inlined into the main entry). Internal
+  `src/internal/` modules are still inlined wherever they're used, never published as separate
+  entry points. The `stopwords/*` subpath exports' `types` condition points straight at the
+  `.ts` source (`src/stopwords/*.ts`, shipped via `files`) rather than a generated `.d.ts` —
+  `vite-plugin-dts`'s `rollupTypes` doesn't self-contain secondary entries (it emits a relative
+  `export * from '../src/...'` re-export, which breaks under `NodeNext`/`node16` module
+  resolution on the consumer's side), and these files are simple enough that a rolled-up
+  declaration buys nothing. Verified working under `NodeNext` before relying on it — see git
+  history if this needs re-verifying after a `vite-plugin-dts` upgrade.
 
 ## History
 

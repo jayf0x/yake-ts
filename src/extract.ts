@@ -12,6 +12,8 @@ export interface Keyword {
   score: number;
   ngramSize: number;
   occurrences: number;
+  /** Zero-based indices of sentences the phrase occurs in, ascending. */
+  sentenceIds: number[];
 }
 
 const compareCandidates = (a: Candidate, b: Candidate): number => {
@@ -25,6 +27,7 @@ const toKeyword = (candidate: Candidate): Keyword => ({
   score: candidate.h,
   ngramSize: candidate.size,
   occurrences: candidate.tf,
+  sentenceIds: [...new Set(candidate.terms.flatMap((term) => [...term.occurs.keys()]))].sort((a, b) => a - b),
 });
 
 export const extractKeywords = (text: string, options: YakeTsOptions = {}): Keyword[] => {

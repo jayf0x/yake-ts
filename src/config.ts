@@ -1,4 +1,4 @@
-import { ENGLISH_STOPWORDS } from "./stopwords-en.js";
+import { STOPWORDS as ENGLISH_STOPWORDS } from "./stopwords/en.js";
 
 export interface YakeTsOptions {
   /** Max words per candidate keyword phrase. Default 3. */
