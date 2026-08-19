@@ -5,19 +5,19 @@
 import { STOPWORDS as ENGLISH_STOPWORDS } from "./stopwords/en.js";
 
 export interface YakeTsOptions {
-  /** Max words per candidate keyword phrase. Default 3. */
+  /** Max words per candidate keyword phrase. @default 3 */
   maxNgramSize?: number;
-  /** Co-occurrence window size for the relatedness feature. Default 1. */
+  /** Co-occurrence window size for the relatedness feature. @default 1 */
   windowSize?: number;
-  /** Similarity ceiling above which a candidate is dropped as a near-duplicate. 1 disables dedup. Default 0.9. */
+  /** Similarity ceiling above which a candidate is dropped as a near-duplicate. 1 disables dedup. @default 0.9 */
   dedupeThreshold?: number;
-  /** Max number of keywords to return. Default 10. */
+  /** Max number of keywords to return. @default 10 */
   limit?: number;
   /**
-   * Stopwords to use. Defaults to bundled English. For other languages, import
-   * `STOPWORDS` from `yake-ts/stopwords/<code>` (e.g. `yake-ts/stopwords/fr`) and pass it here —
-   * each language is its own subpath export so you only pay for the ones you use. Or pass a
-   * fully custom set.
+   * Stopwords to use. For other languages, import `STOPWORDS` from `yake-ts/stopwords/<code>`
+   * (e.g. `yake-ts/stopwords/fr`) and pass it here — each language is its own subpath export so
+   * you only pay for the ones you use. Or pass a fully custom set.
+   * @default bundled English
    */
   stopwords?: Iterable<string>;
 }

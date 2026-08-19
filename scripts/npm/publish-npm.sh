@@ -16,6 +16,7 @@ fi
 bun run build
 bun run typecheck
 bun run test
+bun run docs
 bun run format
 
 # ── version bump ──────────────────────────────────────────────────────────────

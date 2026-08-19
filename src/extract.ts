@@ -10,7 +10,9 @@ export interface Keyword {
   normalized: string;
   /** YAKE score — lower is more relevant. */
   score: number;
+  /** Number of words in the phrase. */
   ngramSize: number;
+  /** How many times the phrase occurred in the text. */
   occurrences: number;
   /** Zero-based indices of sentences the phrase occurs in, ascending. */
   sentenceIds: number[];

@@ -15,14 +15,24 @@
 scores candidate phrases from statistics of one document alone: word frequency, casing, position,
 spread across sentences, and co-occurrence. No model, no corpus, no training, no network call.
 
+<!-- KEYWORD-EXAMPLE:START -->
 ```ts
 import { extractKeywords } from "yake-ts";
 
-extractKeywords("fix flaky auth test in login flow")[0].keyword; // "fix flaky auth"
+extractKeywords("fix flaky auth test in login flow")[0].keyword;
+// "fix flaky auth"
 ```
+<!-- KEYWORD-EXAMPLE:END -->
 
-One function, zero runtime dependencies, ~5.7 kB gzipped including the English stopword list.
-33 more languages are separate imports you only pay for if you use them.
+One function, zero runtime dependencies, <!-- BUNDLE-SIZE:START -->
+ 5.7 kB
+ <!-- BUNDLE-SIZE:END -->
+gzipped including the English stopword list. 33 more languages are separate imports you only pay
+for if you use them.
+
+> <small>Code snippets, the API tables, the language list, and the bundle size above are
+> generated from the real source/build output, not typed by hand — see
+> [`scripts/docs/sync-readme.ts`](./scripts/docs/sync-readme.ts).</small>
 
 ## Picking a package
 
@@ -62,6 +72,7 @@ npm install yake-ts   # bun / pnpm / yarn all fine
 
 ## Quick start
 
+<!-- QUICKSTART-EXAMPLE:START -->
 ```ts
 import { extractKeywords } from "yake-ts";
 
@@ -72,6 +83,7 @@ const keywords = extractKeywords("fix flaky auth test in login flow");
 //   ...
 // ]
 ```
+<!-- QUICKSTART-EXAMPLE:END -->
 
 Results come back sorted, best first. Typical uses: tagging notes or CMS entries, naming a chat
 session from its first message, enriching search/RAG chunks without an LLM call.
@@ -100,24 +112,28 @@ extractKeywords(text: string, options?: YakeTsOptions): Keyword[]
 
 ### Options
 
-| Option | Type | Default | What it does |
+<!-- OPTIONS-TABLE:START -->
+| Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `maxNgramSize` | `number` | `3` | Max words per candidate keyword phrase. |
-| `windowSize` | `number` | `1` | Co-occurrence window size for the relatedness feature. |
-| `dedupeThreshold` | `number` | `0.9` | Similarity ceiling above which a candidate is dropped as a near-duplicate. `1` disables dedup. |
-| `limit` | `number` | `10` | Max number of keywords to return. |
-| `stopwords` | `Iterable<string>` | bundled English | Stopword set to use — see [Languages](#languages), or pass your own. |
+| maxNgramSize? | number | 3 | Max words per candidate keyword phrase. |
+| windowSize? | number | 1 | Co-occurrence window size for the relatedness feature. |
+| dedupeThreshold? | number | 0.9 | Similarity ceiling above which a candidate is dropped as a near-duplicate. 1 disables dedup. |
+| limit? | number | 10 | Max number of keywords to return. |
+| stopwords? | Iterable<string> | bundled English | Stopwords to use. For other languages, import `STOPWORDS` from `yake-ts/stopwords/<code>` (e.g. `yake-ts/stopwords/fr`) and pass it here — each language is its own subpath export so you only pay for the ones you use. Or pass a fully custom set. |
+<!-- OPTIONS-TABLE:END -->
 
 ### `Keyword`
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `keyword` | `string` | Surface form as it appeared in the source text. |
-| `normalized` | `string` | Lowercased form used for matching and deduplication. |
-| `score` | `number` | YAKE score — lower is more relevant. |
-| `ngramSize` | `number` | Number of words in the phrase. |
-| `occurrences` | `number` | How many times the phrase occurred in the text. |
-| `sentenceIds` | `number[]` | Zero-based indices of the sentences it occurs in, ascending. |
+<!-- KEYWORD-TABLE:START -->
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| keyword | string |  | Surface form as it appeared in the source text. |
+| normalized | string |  | Lowercased form used for matching/deduplication. |
+| score | number |  | YAKE score — lower is more relevant. |
+| ngramSize | number |  | Number of words in the phrase. |
+| occurrences | number |  | How many times the phrase occurred in the text. |
+| sentenceIds | number[] |  | Zero-based indices of sentences the phrase occurs in, ascending. |
+<!-- KEYWORD-TABLE:END -->
 
 ## Languages
 
@@ -131,9 +147,9 @@ import { STOPWORDS as FRENCH } from "yake-ts/stopwords/fr";
 extractKeywords("le chat est sur la table", { stopwords: FRENCH });
 ```
 
-Available codes: `ar`, `bg`, `br`, `cz`, `da`, `de`, `el`, `es`, `et`, `fa`, `fi`, `fr`, `hi`, `hr`,
-`hu`, `hy`, `id`, `it`, `ja`, `lt`, `lv`, `nl`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`,
-`tr`, `uk`, `zh` (vendored from `@ade_oshineye/yaket`'s stopword bundle).
+Available codes: <!-- LANG-CODES:START -->
+ `ar`, `bg`, `br`, `cz`, `da`, `de`, `el`, `es`, `et`, `fa`, `fi`, `fr`, `hi`, `hr`, `hu`, `hy`, `id`, `it`, `ja`, `lt`, `lv`, `nl`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`, `tr`, `uk`, `zh` (vendored from `@ade_oshineye/yaket`'s stopword bundle)
+ <!-- LANG-CODES:END -->
 
 **Adding your own words on top of a bundled list.** Every language, including English, is a plain
 `yake-ts/stopwords/<code>` subpath export — `yake-ts/stopwords/en` works the same as `/fr`. Spread
@@ -163,13 +179,15 @@ and space-join the result before calling `extractKeywords`.
 - **Short input gives thin results.** A five-word title has almost no statistics to score.
 - **No lemmatization or POS filtering**, so plural and singular forms rank as separate candidates.
 
+Need something this doesn't do? Open an [issue](https://github.com/jayf0x/yake-ts/issues) —
+feature requests welcome.
+
 ## Credits
 
 The algorithm is from the YAKE paper: Campos, Mangaravite, Pasquali, Jorge, Nunes, Jatowt,
 *YAKE! Keyword Extraction from Single Documents using Multiple Local Features*, Information
 Sciences 509 (2020), 257–289 — [10.1016/j.ins.2019.09.013](https://doi.org/10.1016/j.ins.2019.09.013).
-Reference implementation: [LIAAD/yake](https://github.com/LIAAD/yake). The TypeScript core and the
-stopword bundle are adapted from [`@ade_oshineye/yaket`](https://github.com/adewale/yaket) (MIT).
+Reference implementation: [LIAAD/yake](https://github.com/LIAAD/yake).
 
 ## Development
 

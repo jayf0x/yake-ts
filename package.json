@@ -20,15 +20,17 @@
   "files": [
     "dist",
     "src",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "bunx --bun vite build --config config/vite.config.ts",
+    "build": "bunx --bun vite build --config config/vite.config.ts && bunx --bun vite build --config config/vite.stopwords.config.ts",
     "dev": "bunx --bun vite build --watch --config config/vite.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "format": "biome check --write .",
+    "docs": "bun scripts/docs/sync-readme.ts",
     "format:check": "biome check .",
     "lint": "biome lint ./src",
     "lint:fix": "biome lint --write ./src",
@@ -39,6 +41,7 @@
     "@biomejs/biome": "^2.5.9",
     "bun-types": "^1.3.14",
     "taglify": "^1.2.1",
+    "type-to-table": "^2.1.0",
     "typescript": "^5.9.3",
     "vite": "^8.2.1",
     "vite-plugin-dts": "^4.5.4"

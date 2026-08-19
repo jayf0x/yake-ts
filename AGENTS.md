@@ -66,6 +66,7 @@ validated `ResolvedOptions` before any of the above runs.
 bun test               # run all tests (bun:test)
 bun run typecheck      # tsc --noEmit
 bun run build          # vite lib build → dist/index.{js,d.ts} + dist/stopwords/<code>.js per language
+bun run docs           # regenerate README.md's tables/examples/size from real source+build output
 bun run format          # biome check --write
 ```
 
@@ -81,16 +82,27 @@ bun run format          # biome check --write
   `yake-ts/stopwords/*` pays zero bytes for the other 33 languages. Don't re-export them from
   `src/index.ts`, that would defeat the tree-shaking.
 - Biome for format/lint (`biome.json` → `config/biome.json`). TS strict.
-- `config/vite.config.ts` builds `src/index.ts` as the main entry, plus one entry per
-  `src/stopwords/*.ts` (except `en.ts`, which is inlined into the main entry). Internal
-  `src/internal/` modules are still inlined wherever they're used, never published as separate
-  entry points. The `stopwords/*` subpath exports' `types` condition points straight at the
-  `.ts` source (`src/stopwords/*.ts`, shipped via `files`) rather than a generated `.d.ts` —
-  `vite-plugin-dts`'s `rollupTypes` doesn't self-contain secondary entries (it emits a relative
-  `export * from '../src/...'` re-export, which breaks under `NodeNext`/`node16` module
-  resolution on the consumer's side), and these files are simple enough that a rolled-up
-  declaration buys nothing. Verified working under `NodeNext` before relying on it — see git
-  history if this needs re-verifying after a `vite-plugin-dts` upgrade.
+- `bun run build` runs two separate Vite configs (`config/vite.config.ts`, then
+  `config/vite.stopwords.config.ts`): `src/index.ts` gets a `vite-plugin-dts` (`rollupTypes: true`)
+  pass, `src/stopwords/*.ts` (except `en.ts`, inlined into the main entry) is a JS-only pass with
+  no dts plugin at all. Internal `src/internal/` modules are still inlined wherever they're used,
+  never published as separate entry points. The `stopwords/*` subpath exports' `types` condition
+  points straight at the `.ts` source (`src/stopwords/*.ts`, shipped via `files`) rather than a
+  generated `.d.ts` — `vite-plugin-dts`'s `rollupTypes` doesn't self-contain secondary entries (it
+  emits a relative `export * from '../src/...'` re-export, which breaks under `NodeNext`/`node16`
+  module resolution on the consumer's side), and these files are simple enough that a rolled-up
+  declaration buys nothing. Running dts across all 34 entries anyway used to print
+  `vite-plugin-dts`'s "Analysis will use the bundled TypeScript version" banner once per entry and
+  leave 33 dead `.d.ts` files in `dist/` — splitting the build in two is what keeps that from
+  happening, not a config tweak on a single build. Verified working under `NodeNext` before relying
+  on it — see git history if this needs re-verifying after a `vite-plugin-dts` upgrade.
+- `scripts/docs/sync-readme.ts` (`bun run docs`) keeps README.md's API tables, language list,
+  bundle size, and code-example output generated from real source/build state rather than
+  hand-typed — see the file's own header comment. Runs automatically as part of
+  `scripts/npm/publish-npm.sh`. Not `type-to-table`: that tool resolves props off a rendering
+  component via `react-docgen-typescript`, and `YakeTsOptions`/`Keyword` are plain interfaces with
+  no component anchoring them, so it doesn't apply here — this uses the TS compiler API directly
+  instead.
 
 ## History
 
