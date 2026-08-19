@@ -8,7 +8,7 @@ import { defineConfig } from "vite";
 const stopwordsDir = resolve(import.meta.dirname, "../src/stopwords");
 const stopwordEntries = Object.fromEntries(
   readdirSync(stopwordsDir)
-    .filter((file) => file.endsWith(".ts") && file !== "en.ts")
+    .filter((file) => file.endsWith(".ts"))
     .map((file) => [`stopwords/${file.replace(/\.ts$/, "")}`, resolve(stopwordsDir, file)]),
 );
 
